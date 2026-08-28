@@ -16,26 +16,52 @@
                 <button id="reset-btn" class="reset-btn">Reset</button>
             </header>
 
-            <div class="control-group" id="course-group">
-                <h3>Course</h3>
-                <div class="button-container" id="course-buttons"></div>
+            <!-- Mode Switcher -->
+            <div class="mode-tabs">
+                <button class="tab-btn selected" data-mode="student">Student</button>
+                <button class="tab-btn" data-mode="faculty">Faculty / Room</button>
             </div>
 
-            <div class="control-group hidden" id="dept-group">
-                <h3>Department</h3>
-                <div class="button-container" id="dept-buttons"></div>
+            <!-- STUDENT VIEW CONTROLS -->
+            <div id="student-view">
+                <div class="control-group" id="course-group">
+                    <h3>Course</h3>
+                    <div class="button-container" id="course-buttons"></div>
+                </div>
+
+                <div class="control-group hidden" id="dept-group">
+                    <h3>Department</h3>
+                    <div class="button-container" id="dept-buttons"></div>
+                </div>
+
+                <div class="control-group hidden" id="sem-group">
+                    <h3>Semester</h3>
+                    <div class="button-container" id="sem-buttons"></div>
+                </div>
+
+                <div class="control-group hidden" id="sec-group">
+                    <h3>Section</h3>
+                    <div class="button-container" id="sec-buttons"></div>
+                </div>
             </div>
 
-            <div class="control-group hidden" id="sem-group">
-                <h3>Semester</h3>
-                <div class="button-container" id="sem-buttons"></div>
+            <!-- FACULTY/ROOM VIEW CONTROLS -->
+            <div id="faculty-view" class="hidden">
+                <div class="control-group">
+                    <h3>Search By</h3>
+                    <div class="button-container">
+                        <button class="option-btn selected" data-type="fac-mode" data-value="faculty">Faculty Name</button>
+                        <button class="option-btn" data-type="fac-mode" data-value="room">Room / Lab</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h3 id="search-label">Select Faculty</h3>
+                    <input type="text" id="search-input" class="input-box w-100" list="search-datalist" placeholder="Type or select name...">
+                    <datalist id="search-datalist"></datalist>
+                </div>
             </div>
 
-            <div class="control-group hidden" id="sec-group">
-                <h3>Section</h3>
-                <div class="button-container" id="sec-buttons"></div>
-            </div>
-
+            <!-- COMMON CONTROLS (Day & Session) -->
             <div class="control-group hidden" id="day-group">
                 <h3>Day</h3>
                 <div class="button-container">
