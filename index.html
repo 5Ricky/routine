@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quick Routine Check</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <main class="app-container">
+        <!-- Left/Bottom Panel: Options -->
+        <section class="panel options-panel">
+            <header>
+                <h1>QUICK CHECK</h1>
+                <button id="reset-btn" class="reset-btn">Reset</button>
+            </header>
+
+            <div class="control-group" id="course-group">
+                <h3>Course</h3>
+                <div class="button-container" id="course-buttons"></div>
+            </div>
+
+            <div class="control-group hidden" id="dept-group">
+                <h3>Department</h3>
+                <div class="button-container" id="dept-buttons"></div>
+            </div>
+
+            <div class="control-group hidden" id="sem-group">
+                <h3>Semester</h3>
+                <div class="button-container" id="sem-buttons"></div>
+            </div>
+
+            <div class="control-group hidden" id="sec-group">
+                <h3>Section</h3>
+                <div class="button-container" id="sec-buttons"></div>
+            </div>
+
+            <div class="control-group hidden" id="day-group">
+                <h3>Day</h3>
+                <div class="button-container">
+                    <button class="option-btn" data-type="day" data-value="Monday">Mon</button>
+                    <button class="option-btn" data-type="day" data-value="Tuesday">Tue</button>
+                    <button class="option-btn" data-type="day" data-value="Wednesday">Wed</button>
+                    <button class="option-btn" data-type="day" data-value="Thursday">Thu</button>
+                    <button class="option-btn" data-type="day" data-value="Friday">Fri</button>
+                    <button class="option-btn w-100" data-type="day" data-value="All">ALL 5 DAYS</button>
+                </div>
+            </div>
+
+            <div class="control-group hidden" id="half-group">
+                <h3>Session</h3>
+                <div class="button-container">
+                    <button class="option-btn" data-type="half" data-value="1st">1st Half</button>
+                    <button class="option-btn" data-type="half" data-value="2nd">2nd Half</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right/Top Panel: Results -->
+        <section class="panel results-panel">
+            <header>
+                <h2>ROUTINE</h2>
+            </header>
+            
+            <div id="live-status" class="live-status-container hidden">
+                <div class="status-box">
+                    <h3>CURRENT</h3>
+                    <div id="current-class-content">No current class</div>
+                </div>
+                <div class="status-box">
+                    <h3>NEXT</h3>
+                    <div id="next-class-content">No upcoming class</div>
+                </div>
+            </div>
+
+            <div id="routine-results" class="routine-results">
+                <p class="placeholder-text">Select options to view routine.</p>
+            </div>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
