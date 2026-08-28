@@ -1,26 +1,32 @@
-// Central State
 let dataset = null;
-let metadata = null;
+let allClasses = []; 
+let uniqueFaculties = new Set();
+let uniqueRooms = new Set();
+
+let appMode = 'student'; // 'student' or 'faculty'
+let searchMode = 'faculty'; // 'faculty' or 'room'
+
 let selection = { course: null, department: null, semester: null, section: null, day: null, half: null };
 
-// DOM Elements
 const els = {
+    studentView: document.getElementById('student-view'), facultyView: document.getElementById('faculty-view'),
     courseGrp: document.getElementById('course-group'), courseBtns: document.getElementById('course-buttons'),
     deptGrp: document.getElementById('dept-group'), deptBtns: document.getElementById('dept-buttons'),
     semGrp: document.getElementById('sem-group'), semBtns: document.getElementById('sem-buttons'),
     secGrp: document.getElementById('sec-group'), secBtns: document.getElementById('sec-buttons'),
     dayGrp: document.getElementById('day-group'), halfGrp: document.getElementById('half-group'),
+    searchInput: document.getElementById('search-input'), searchDatalist: document.getElementById('search-datalist'),
+    searchLabel: document.getElementById('search-label'),
     routineResults: document.getElementById('routine-results'), liveStatus: document.getElementById('live-status'),
     currentClass: document.getElementById('current-class-content'), nextClass: document.getElementById('next-class-content')
 };
 
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     fetch('./data/timetable.json')
         .then(response => response.json())
         .then(data => {
             dataset = data.schedule; 
-            metadata = data.metadata;
+            buildGlobalIndexes();
             createButtons(Object.keys(dataset), els.courseBtns, 'course');
         })
         .catch(err => console.error("Error loading timetable:", err));
@@ -28,6 +34,57 @@ document.addEventListener('DOMContentLoaded', () => {
     setupListeners();
     setInterval(updateLiveStatus, 60000);
 });
+
+// Build Indexes for Faculty/Room Search
+function buildGlobalIndexes() {
+    allClasses = [];
+    uniqueFaculties = new Set();
+    uniqueRooms = new Set();
+
+    for (const course in dataset) {
+        for (const dept in dataset[course]) {
+            for (const sem in dataset[course][dept]) {
+                const semObj = dataset[course][dept][sem];
+                if (semObj.sections) {
+                    for (const sec in semObj.sections) extractClasses(semObj.sections[sec], course, dept, sem, sec);
+                } else if (semObj.days) {
+                    extractClasses(semObj.days, course, dept, sem, null);
+                }
+            }
+        }
+    }
+}
+
+function extractClasses(daysObj, course, dept, sem, sec) {
+    for (const day in daysObj) {
+        daysObj[day].forEach(cls => {
+            allClasses.push({ ...cls, course, dept, sem, sec, day });
+            
+            if (cls.faculty) {
+                cls.faculty.forEach(fStr => {
+                    fStr.split(',').forEach(f => {
+                        const cleanF = f.trim();
+                        if (cleanF) uniqueFaculties.add(cleanF);
+                    });
+                });
+            }
+            if (cls.room) uniqueRooms.add(cls.room.trim());
+        });
+    }
+}
+
+function populateDatalist() {
+    els.searchDatalist.innerHTML = '';
+    const items = searchMode === 'faculty' ? [...uniqueFaculties].sort() : [...uniqueRooms].sort();
+    items.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item;
+        els.searchDatalist.appendChild(opt);
+    });
+    els.searchInput.value = '';
+    els.searchInput.placeholder = searchMode === 'faculty' ? 'Type faculty initials...' : 'Type room number...';
+    els.searchLabel.textContent = searchMode === 'faculty' ? 'Select Faculty' : 'Select Room/Lab';
+}
 
 // UI Generation
 function createButtons(items, container, type) {
@@ -60,15 +117,11 @@ function handleSelection(type, value, buttonEl) {
     } else if (type === 'semester') {
         selection.semester = value;
         resetFrom('section');
-        
         const semData = dataset[selection.course][selection.department][value];
         if (semData.sections) {
-            // Department has sections
             createButtons(Object.keys(semData.sections), els.secBtns, 'section');
             els.secGrp.classList.remove('hidden');
-            els.dayGrp.classList.add('hidden');
-        } else if (semData.days) {
-            // Department has NO sections
+        } else {
             selection.section = null;
             els.secGrp.classList.add('hidden');
             els.dayGrp.classList.remove('hidden');
@@ -77,6 +130,11 @@ function handleSelection(type, value, buttonEl) {
         selection.section = value;
         resetFrom('day');
         els.dayGrp.classList.remove('hidden');
+    } else if (type === 'fac-mode') {
+        searchMode = value;
+        populateDatalist();
+        els.dayGrp.classList.add('hidden');
+        clearResults();
     } else if (type === 'day') {
         selection.day = value;
         selection.half = null; 
@@ -111,30 +169,85 @@ function resetFrom(level) {
 }
 
 function setupListeners() {
+    // Mode Switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('selected'));
+            e.target.classList.add('selected');
+            appMode = e.target.dataset.mode;
+            
+            if (appMode === 'student') {
+                els.studentView.classList.remove('hidden');
+                els.facultyView.classList.add('hidden');
+                resetFrom('course');
+                els.courseGrp.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+            } else {
+                els.studentView.classList.add('hidden');
+                els.facultyView.classList.remove('hidden');
+                populateDatalist();
+                els.dayGrp.classList.add('hidden');
+                els.halfGrp.classList.add('hidden');
+            }
+            clearResults();
+        });
+    });
+
+    // Options Clicks
     document.querySelector('.options-panel').addEventListener('click', (e) => {
         if (e.target.classList.contains('option-btn')) {
             handleSelection(e.target.dataset.type, e.target.dataset.value, e.target);
         }
     });
 
+    // Search Input
+    els.searchInput.addEventListener('change', () => {
+        if (els.searchInput.value.trim().length > 0) {
+            els.dayGrp.classList.remove('hidden');
+            if(selection.day) renderRoutine();
+        } else {
+            els.dayGrp.classList.add('hidden');
+            els.halfGrp.classList.add('hidden');
+            clearResults();
+        }
+    });
+
+    // Reset Button
     document.getElementById('reset-btn').addEventListener('click', () => {
         selection = { course: null, department: null, semester: null, section: null, day: null, half: null };
         document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
-        resetFrom('department');
+        if(appMode === 'student') resetFrom('department');
+        if(appMode === 'faculty') populateDatalist();
     });
 }
 
 // Rendering Logic
 function getTargetSchedule() {
-    if (!selection.course || !selection.department || !selection.semester) return null;
-    const base = dataset[selection.course][selection.department][selection.semester];
-    
-    if (base.sections && selection.section) {
-        return base.sections[selection.section];
-    } else if (base.days) {
-        return base.days;
+    if (appMode === 'student') {
+        if (!selection.course || !selection.department || !selection.semester) return null;
+        const base = dataset[selection.course][selection.department][selection.semester];
+        return (base.sections && selection.section) ? base.sections[selection.section] : (base.days || null);
+    } 
+    else if (appMode === 'faculty') {
+        const query = els.searchInput.value.trim();
+        if (!query) return null;
+
+        const filteredClasses = allClasses.filter(c => {
+            if (searchMode === 'faculty') {
+                if (!c.faculty) return false;
+                return c.faculty.some(fStr => fStr.split(',').map(s=>s.trim()).includes(query));
+            } else {
+                return c.room && c.room.trim() === query;
+            }
+        });
+
+        // Shape into standard schedule format { "Monday": [...], "Tuesday": [...] }
+        const pseudoSchedule = {};
+        filteredClasses.forEach(c => {
+            if (!pseudoSchedule[c.day]) pseudoSchedule[c.day] = [];
+            pseudoSchedule[c.day].push(c);
+        });
+        return pseudoSchedule;
     }
-    return null;
 }
 
 function renderRoutine() {
@@ -151,13 +264,10 @@ function renderRoutine() {
     days.forEach(day => {
         let classes = schedule[day] || [];
         
-        // Custom logic to handle 1st Half / 2nd Half filtering
-        // Assumption based on your JSON: Recess ends at 14:00. Classes starting < 14:00 are 1st half.
         if (selection.half) {
             classes = classes.filter(c => {
                 const hour = parseInt(c.start.split(':')[0], 10);
-                const classHalf = hour < 14 ? '1st' : '2nd';
-                return classHalf === selection.half;
+                return (hour < 14 ? '1st' : '2nd') === selection.half;
             });
         }
 
@@ -186,9 +296,12 @@ function createCard(cls) {
     let html = `<div class="class-time">${formatTime(cls.start)} – ${formatTime(cls.end)}</div>
                 <div class="class-subject">${cls.subject}</div>`;
                 
-    if (cls.faculty && cls.faculty.length > 0) {
-        html += `<div class="class-detail">Faculty: ${cls.faculty.join(', ')}</div>`;
+    if (appMode === 'faculty') {
+        const target = `${cls.course} ${cls.dept} S${cls.sem}` + (cls.sec ? ` [${cls.sec}]` : '');
+        html += `<div class="class-detail"><span class="target-badge">${target}</span></div>`;
     }
+
+    if (cls.faculty && cls.faculty.length > 0) html += `<div class="class-detail">Faculty: ${cls.faculty.join(', ')}</div>`;
     if (cls.room) html += `<div class="class-detail">Room: ${cls.room}</div>`;
     if (cls.type) html += `<span class="type-badge">${cls.type}</span>`;
     
@@ -241,9 +354,15 @@ function updateLiveStatus(scheduleOverride = null) {
 }
 
 function buildLiveCard(cls) {
+    let targetHtml = '';
+    if (appMode === 'faculty') {
+        const target = `${cls.course} ${cls.dept} S${cls.sem}` + (cls.sec ? ` [${cls.sec}]` : '');
+        targetHtml = `<div class="class-detail"><span class="target-badge" style="background:#475569; color:white;">${target}</span></div>`;
+    }
     return `
         <div class="class-subject">${cls.subject}</div>
         <div class="class-time">${formatTime(cls.start)} – ${formatTime(cls.end)}</div>
+        ${targetHtml}
         ${cls.room ? `<div class="class-detail">Room: ${cls.room}</div>` : ''}
     `;
 }
